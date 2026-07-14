@@ -311,7 +311,7 @@
   Reel Bench processes everything on-device using ffmpeg compiled to WebAssembly. First-time load fetches a ~30MB engine — after that it works offline. Large files and 4K/8K exports depend on your device's memory and CPU.
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.min.js"></script>
+<script src="vendor/ffmpeg.js"></script>
 <script>
 (function(){
 "use strict";
@@ -323,13 +323,6 @@ let engineLoading = null;
 let activeLogHandler = null;
 function setLogHandler(fn){ activeLogHandler = fn; }
 
-async function toBlobURL(url, mimeType){
-  const resp = await fetch(url);
-  if(!resp.ok) throw new Error("Could not fetch engine file: " + url);
-  const buf = await resp.arrayBuffer();
-  return URL.createObjectURL(new Blob([buf], {type:mimeType}));
-}
-
 let currentLogHandler = null;
 function setLogHandler(fn){ currentLogHandler = fn; }
 
@@ -338,32 +331,24 @@ async function ensureEngine(onLog){
   if(engineLoading) return engineLoading;
   engineLoading = (async () => {
     if(typeof FFmpegWASM === "undefined"){
-      throw new Error("The FFmpeg engine script failed to load. Check your internet connection and reload the page.");
+      throw new Error("The FFmpeg engine script failed to load. Make sure vendor/ffmpeg.js was uploaded alongside this page, then reload.");
     }
     const { FFmpeg } = FFmpegWASM;
     ffmpeg = new FFmpeg();
     ffmpeg.on("log", ({message}) => { if(activeLogHandler) activeLogHandler(message); if(onLog) onLog(message); });
-    // Fetch the core engine files ourselves and hand FFmpeg local blob: URLs. We deliberately
-    // do NOT pass a classWorkerURL — FFmpeg's own UMD bundle constructs its worker correctly
-    // when the page is served over http(s); hardcoding a specific worker chunk filename here
-    // used to break (404) whenever that internal chunk name changed between releases.
-    const sources = [
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd",
-      "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd"
-    ];
-    let lastErr = null;
-    for(const core of sources){
-      try{
-        const coreURL = await toBlobURL(core + "/ffmpeg-core.js", "text/javascript");
-        const wasmURL = await toBlobURL(core + "/ffmpeg-core.wasm", "application/wasm");
-        await ffmpeg.load({ coreURL, wasmURL });
-        engineReady = true;
-        return ffmpeg;
-      }catch(e){
-        lastErr = e;
-      }
+    // All engine files are served from the same origin as this page (the vendor/ folder next to
+    // this HTML file), so there is no cross-origin Worker restriction and no CDN dependency.
+    try{
+      await ffmpeg.load({
+        coreURL: "vendor/ffmpeg-core.js",
+        wasmURL: "vendor/ffmpeg-core.wasm",
+        classWorkerURL: "vendor/814.ffmpeg.js"
+      });
+      engineReady = true;
+      return ffmpeg;
+    }catch(e){
+      throw new Error("Could not load the local video engine files in vendor/. Make sure vendor/ffmpeg.js, vendor/814.ffmpeg.js, vendor/ffmpeg-core.js and vendor/ffmpeg-core.wasm were all uploaded next to this page. (" + e.message + ")");
     }
-    throw new Error("Could not download the video engine from any source. Check your internet connection and try again. (" + (lastErr && lastErr.message) + ")");
   })();
   try{
     return await engineLoading;
