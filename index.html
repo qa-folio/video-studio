@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reel Bench — Video Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141110;
+    --panel:#1d1815;
+    --panel-2:#241e19;
+    --line:#3a2f26;
+    --amber:#e8a33d;
+    --amber-dim:#8a611f;
+    --tally:#c1503f;
+    --teal:#5fb3a3;
+    --text:#efe6d8;
+    --text-dim:#a89a87;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5;}
+  ::selection{background:var(--amber);color:#141110;}
+
+  /* sprocket strip header */
+  .sprockets{height:14px;background-image:repeating-linear-gradient(90deg,var(--panel-2) 0 8px, transparent 8px 20px);border-bottom:1px solid var(--line);}
+
+  header{padding:28px 24px 18px;max-width:1180px;margin:0 auto;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,4vw,42px);margin:6px 0 8px;font-weight:700;letter-spacing:-.01em;}
+  header p{color:var(--text-dim);max-width:640px;font-size:14.5px;margin:0;}
+
+  main{max-width:1180px;margin:0 auto;padding:0 24px 80px;}
+
+  .modes{display:flex;gap:8px;margin:22px 0 20px;border-bottom:1px solid var(--line);}
+  .mode-btn{background:none;border:none;color:var(--text-dim);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14.5px;padding:10px 4px;margin-right:22px;cursor:pointer;border-bottom:2px solid transparent;letter-spacing:.01em;}
+  .mode-btn.active{color:var(--amber);border-bottom-color:var(--amber);}
+  .mode-btn:hover{color:var(--text);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;}
+  @media (max-width:880px){.grid{grid-template-columns:1fr;}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 14px;display:flex;align-items:center;gap:9px;color:var(--text);}
+  .card h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block;}
+
+  .drop-wrap{position:relative;display:block;border:1.5px dashed var(--line);border-radius:var(--radius);padding:34px 16px;text-align:center;cursor:pointer;transition:.15s;background:var(--panel-2);}
+  .drop-wrap:hover, .drop-wrap.drag{border-color:var(--amber);background:#2a2118;}
+  .drop-wrap .big{font-family:'Space Grotesk',sans-serif;font-size:14.5px;color:var(--text);}
+  .drop-wrap .small{font-size:12.5px;color:var(--text-dim);margin-top:4px;}
+  .file-overlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0;border:0;-webkit-appearance:none;appearance:none;}
+
+  video{width:100%;border-radius:8px;background:#000;display:block;margin-top:12px;max-height:360px;}
+
+  .native-fallback{margin-top:10px;font-size:12px;color:var(--text-dim);}
+  .native-fallback input[type=file]{position:static;width:auto;height:auto;padding:0;margin:8px 0 0;overflow:visible;clip:auto;white-space:normal;border:0;opacity:1;display:block;}
+  .native-fallback input[type=file]::file-selector-button{background:var(--amber);color:#1a1410;border:none;padding:9px 14px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;margin-right:10px;}
+  .native-fallback input[type=file]::-webkit-file-upload-button{background:var(--amber);color:#1a1410;border:none;padding:9px 14px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;margin-right:10px;}
+
+  label.field{display:block;font-size:12.5px;color:var(--text-dim);margin:14px 0 6px;font-family:'JetBrains Mono',monospace;letter-spacing:.03em;}
+  select, input[type=number], input[type=range]{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:9px 10px;border-radius:7px;font-family:'Inter',sans-serif;font-size:13.5px;}
+  select:focus, input:focus{outline:2px solid var(--amber-dim);outline-offset:1px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .opt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+  .opt{border:1px solid var(--line);background:var(--panel-2);border-radius:7px;padding:9px 10px;font-size:13px;cursor:pointer;text-align:center;color:var(--text-dim);}
+  .opt.sel{border-color:var(--amber);color:var(--amber);background:#2a2118;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;margin-top:10px;}
+  .switch{width:38px;height:21px;border-radius:12px;background:var(--line);position:relative;cursor:pointer;flex-shrink:0;}
+  .switch.on{background:var(--amber-dim);}
+  .switch::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--text-dim);transition:.15s;}
+  .switch.on::after{left:19px;background:var(--amber);}
+
+  .btn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:8px;padding:12px 20px;cursor:pointer;letter-spacing:.01em;}
+  .btn-primary{background:var(--amber);color:#1a1410;width:100%;}
+  .btn-primary:disabled{background:var(--amber-dim);color:#3a2f26;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);}
+  .btn-tally{background:transparent;border:1px solid var(--tally);color:var(--tally);}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px;}
+
+  .status{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);margin-top:10px;min-height:16px;white-space:pre-wrap;word-break:break-word;}
+  .progress-wrap{height:8px;background:var(--panel-2);border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid var(--line);}
+  .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--amber-dim),var(--amber));transition:width .2s;}
+
+  .warn{background:#2a2016;border:1px solid var(--amber-dim);color:#e0c496;border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:12px;}
+  .note{font-size:12px;color:var(--text-dim);margin-top:6px;}
+
+  .queue-item{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .queue-item .name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .queue-item .badge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);background:#2a2118;border-radius:5px;padding:2px 6px;}
+  .qbtns button{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:2px 5px;}
+  .qbtns button:hover{color:var(--amber);}
+
+  footer{max-width:1180px;margin:0 auto;padding:0 24px 60px;color:var(--text-dim);font-size:12px;}
+  a{color:var(--teal);}
+
+  .result-box{border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--panel);margin-top:6px;}
+  .dl-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+
+<div class="sprockets"></div>
+<header>
+  <div class="eyebrow">Runs entirely in your browser · Free · No upload to any server</div>
+  <h1>Reel Bench</h1>
+  <p>Trim, merge, cartoonize, change voice tone, swap background music, and export in 9:16 or 16:9 up to 8K — all processed locally on your device. Nothing leaves your computer.</p>
+</header>
+
+<main>
+
+  <div class="modes">
+    <button class="mode-btn active" data-mode="edit">Edit &amp; Export</button>
+    <button class="mode-btn" data-mode="merge">Merge Videos</button>
+  </div>
+
+  <!-- ============ EDIT MODE ============ -->
+  <div class="panel active" id="panel-edit">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2><span class="dot"></span>Source video</h2>
+          <div class="drop-wrap" id="edit-drop">
+            <div class="big">Tap to choose a video, or drop it here</div>
+            <div class="small">MP4, MOV, WEBM, MKV — stays on your device</div>
+            <input type="file" id="edit-file" class="file-overlay" accept="video/*">
+          </div>
+          <div class="native-fallback">Box above not responding? Use this button instead:
+            <input type="file" id="edit-file-fallback" accept="video/*">
+          </div>
+          <video id="edit-preview" controls style="display:none;"></video>
+          <div class="row2" id="trim-row" style="display:none;">
+            <div>
+              <label class="field">Trim start (sec)</label>
+              <input type="number" id="trim-start" min="0" step="0.1" value="0">
+            </div>
+            <div>
+              <label class="field">Trim end (sec)</label>
+              <input type="number" id="trim-end" min="0" step="0.1" value="0">
+            </div>
+          </div>
+          <div class="note" id="dur-note"></div>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot"></span>Result</h2>
+          <div id="edit-result-empty" class="note">Your processed video will appear here after you hit "Process video".</div>
+          <div id="edit-result" style="display:none;" class="result-box">
+            <video id="out-preview" controls></video>
+            <div class="dl-row">
+              <a id="dl-link" class="btn btn-primary" download="reel-bench-export.mp4" style="text-decoration:none;text-align:center;">Download video</a>
+              <button class="btn btn-ghost" id="send-to-merge">Add to Merge queue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2><span class="dot"></span>Frame &amp; crop</h2>
+          <label class="field">Aspect ratio</label>
+          <div class="opt-grid" id="aspect-opts">
+            <div class="opt sel" data-val="original">Original</div>
+            <div class="opt" data-val="16:9">16:9 landscape</div>
+            <div class="opt" data-val="9:16">9:16 vertical</div>
+            <div class="opt" data-val="1:1">1:1 square</div>
+          </div>
+          <label class="field">Export resolution</label>
+          <div class="opt-grid" id="res-opts">
+            <div class="opt sel" data-val="original">Original</div>
+            <div class="opt" data-val="1080p">1080p</div>
+            <div class="opt" data-val="4k">4K</div>
+            <div class="opt" data-val="8k">8K</div>
+          </div>
+          <div class="warn" id="res-warning" style="display:none;">4K/8K exports are upscaled and re-encoded entirely on your device — this can take several minutes and needs a reasonably powerful computer. Chrome or Edge desktop works best.</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot"></span>Cartoon style filter</h2>
+          <div class="toggle-row">
+            <span>Apply cartoon/toon-shaded look to the whole frame</span>
+            <div class="switch" id="cartoon-switch"></div>
+          </div>
+          <div id="cartoon-intensity-wrap" style="display:none;">
+            <label class="field">Intensity</label>
+            <div class="opt-grid">
+              <div class="opt sel" data-val="light" data-group="cartoon-intensity">Light</div>
+              <div class="opt" data-val="strong" data-group="cartoon-intensity">Strong</div>
+            </div>
+          </div>
+          <div class="note">This stylizes the entire picture (edges + flattened color), like a toon-shader filter — it does not identify or alter any specific person's identity.</div>
+          <div class="warn">This effect roughly doubles processing time since it analyzes every frame twice (edges + color). Worth trying on a short clip first.</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot"></span>Voice tone</h2>
+          <label class="field">Effect</label>
+          <select id="voice-select">
+            <option value="normal">Normal (no change)</option>
+            <option value="deep">Deep / low voice</option>
+            <option value="high">High / chipmunk voice</option>
+            <option value="robot">Robot voice</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot"></span>Background music</h2>
+          <div class="drop-wrap" id="music-drop" style="padding:18px;">
+            <div class="big" style="font-size:13px;">Tap to add a music file (optional)</div>
+            <div class="small">MP3, WAV, M4A</div>
+            <input type="file" id="music-file" class="file-overlay" accept="audio/*">
+          </div>
+          <div class="native-fallback">Box above not responding? Use this button instead:
+            <input type="file" id="music-file-fallback" accept="audio/*">
+          </div>
+          <div id="music-name" class="note"></div>
+          <div id="music-opts" style="display:none;">
+            <label class="field">Mode</label>
+            <div class="opt-grid">
+              <div class="opt sel" data-val="mix" data-group="bg-mode">Mix with original audio</div>
+              <div class="opt" data-val="replace" data-group="bg-mode">Replace original audio</div>
+            </div>
+            <label class="field">Music volume</label>
+            <input type="range" id="music-vol" min="0" max="1" step="0.05" value="0.5">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot"></span>Export quality</h2>
+          <select id="quality-select">
+            <option value="fast">Fast (lower size, quicker export)</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="high">High quality (larger file, slower)</option>
+          </select>
+          <button class="btn btn-primary" id="process-btn" style="margin-top:16px;">Process video</button>
+          <div class="progress-wrap"><div class="progress-bar" id="edit-progress"></div></div>
+          <div class="status" id="edit-status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MERGE MODE ============ -->
+  <div class="panel" id="panel-merge">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2><span class="dot"></span>Videos to merge, in order</h2>
+          <div class="drop-wrap" id="merge-drop">
+            <div class="big">Tap to add videos, or drop them here</div>
+            <div class="small">Add as many as you like — reorder with the arrows</div>
+            <input type="file" id="merge-file" class="file-overlay" accept="video/*" multiple>
+          </div>
+          <div class="native-fallback">Box above not responding? Use this button instead:
+            <input type="file" id="merge-file-fallback" accept="video/*" multiple>
+          </div>
+          <div id="merge-queue" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot"></span>Result</h2>
+          <div id="merge-result-empty" class="note">Your merged video will appear here.</div>
+          <div id="merge-result" style="display:none;" class="result-box">
+            <video id="merge-out-preview" controls></video>
+            <div class="dl-row">
+              <a id="merge-dl-link" class="btn btn-primary" download="reel-bench-merged.mp4" style="text-decoration:none;text-align:center;">Download video</a>
+              <button class="btn btn-ghost" id="send-merge-to-edit">Open in Editor</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2><span class="dot"></span>Output frame</h2>
+          <div class="note" style="margin-bottom:8px;">All clips are normalized to this size before joining, so mismatched phone/camera clips merge cleanly.</div>
+          <label class="field">Aspect ratio</label>
+          <div class="opt-grid" id="merge-aspect-opts">
+            <div class="opt sel" data-val="16:9">16:9 landscape</div>
+            <div class="opt" data-val="9:16">9:16 vertical</div>
+            <div class="opt" data-val="1:1">1:1 square</div>
+          </div>
+          <label class="field">Resolution</label>
+          <div class="opt-grid" id="merge-res-opts">
+            <div class="opt sel" data-val="1080p">1080p</div>
+            <div class="opt" data-val="4k">4K</div>
+            <div class="opt" data-val="8k">8K</div>
+          </div>
+          <div class="warn" id="merge-res-warning" style="display:none;">4K/8K merges of multiple clips can take a long time fully in-browser. Start with 1080p to confirm the edit, then re-export bigger if needed.</div>
+        </div>
+
+        <div class="card">
+          <button class="btn btn-primary" id="merge-btn">Merge videos</button>
+          <div class="progress-wrap"><div class="progress-bar" id="merge-progress"></div></div>
+          <div class="status" id="merge-status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Reel Bench processes everything on-device using ffmpeg compiled to WebAssembly. First-time load fetches a ~30MB engine — after that it works offline. Large files and 4K/8K exports depend on your device's memory and CPU.
+</footer>
+
+<script src="vendor/ffmpeg.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------------- FFmpeg engine ---------------- */
+let ffmpeg = null;
+let engineReady = false;
+let engineLoading = null;
+let activeLogHandler = null;
+function setLogHandler(fn){ activeLogHandler = fn; }
+
+let currentLogHandler = null;
+function setLogHandler(fn){ currentLogHandler = fn; }
+
+async function ensureEngine(onLog){
+  if(engineReady) return ffmpeg;
+  if(engineLoading) return engineLoading;
+  engineLoading = (async () => {
+    if(typeof FFmpegWASM === "undefined"){
+      throw new Error("The FFmpeg engine script failed to load. Make sure vendor/ffmpeg.js was uploaded alongside this page, then reload.");
+    }
+    const { FFmpeg } = FFmpegWASM;
+    ffmpeg = new FFmpeg();
+    ffmpeg.on("log", ({message}) => { if(activeLogHandler) activeLogHandler(message); if(onLog) onLog(message); });
+    // All engine files are served from the same origin as this page (the vendor/ folder next to
+    // this HTML file), so there is no cross-origin Worker restriction and no CDN dependency.
+    try{
+      await ffmpeg.load({
+        coreURL: "vendor/ffmpeg-core.js",
+        wasmURL: "vendor/ffmpeg-core.wasm",
+        classWorkerURL: "vendor/814.ffmpeg.js"
+      });
+      engineReady = true;
+      return ffmpeg;
+    }catch(e){
+      throw new Error("Could not load the local video engine files in vendor/. Make sure vendor/ffmpeg.js, vendor/814.ffmpeg.js, vendor/ffmpeg-core.js and vendor/ffmpeg-core.wasm were all uploaded next to this page. (" + e.message + ")");
+    }
+  })();
+  try{
+    return await engineLoading;
+  }catch(e){
+    engineLoading = null; // allow retry on next attempt instead of staying stuck on a rejected promise
+    throw e;
+  }
+}
+
+async function fileToUint8(file){
+  const buf = await file.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+async function safeDelete(name){
+  try{ await ffmpeg.deleteFile(name); }catch(e){ /* ignore */ }
+}
+
+/* ---------------- Shared option helpers ---------------- */
+const RES_TABLE = {
+  "16:9": {"1080p":[1920,1080], "4k":[3840,2160], "8k":[7680,4320]},
+  "9:16": {"1080p":[1080,1920], "4k":[2160,3840], "8k":[4320,7680]},
+  "1:1":  {"1080p":[1080,1080], "4k":[2160,2160], "8k":[4320,4320]}
+};
+
+// NOTE: this runs on a single-threaded WASM encoder in the browser, not native multi-threaded
+// ffmpeg. Presets like "fast"/"medium" are tuned for multi-core native encoding and are
+// disproportionately slow here for very little quality gain. Capping at "veryfast" keeps
+// exports from taking many minutes/hours on real device hardware.
+const QUALITY_TABLE = {
+  fast:     {preset:"ultrafast", crf:"28"},
+  balanced: {preset:"superfast", crf:"24"},
+  high:     {preset:"veryfast",  crf:"20"}
+};
+
+function aspectRatioValue(aspect){
+  if(aspect === "16:9") return 16/9;
+  if(aspect === "9:16") return 9/16;
+  if(aspect === "1:1") return 1;
+  return null;
+}
+
+function cropStep(aspect){
+  const ar = aspectRatioValue(aspect);
+  if(!ar) return null;
+  return `crop=w='min(iw,ih*${ar})':h='min(ih,iw/${ar})'`;
+}
+
+function scaleStep(aspect, resTier){
+  if(resTier === "original" || !resTier) return null;
+  if(aspect === "original"){
+    // No crop was applied, so only scale the long edge to avoid stretching the source.
+    const heightMap = {"1080p":1080, "4k":2160, "8k":4320};
+    const h = heightMap[resTier];
+    return { filter: `scale=-2:${h}:flags=lanczos` };
+  }
+  const dims = RES_TABLE[aspect] && RES_TABLE[aspect][resTier];
+  if(!dims) return null;
+  return { filter: `scale=${dims[0]}:${dims[1]}:flags=lanczos`, w: dims[0], h: dims[1] };
+}
+
+function cartoonGraph(baseLabel, outLabel, intensity){
+  const strong = intensity === "strong";
+  // Values verified against real ffmpeg output on test images before shipping.
+  const blurSigma = strong ? 14 : 8;
+  const sat = strong ? 2.6 : 2.2;
+  const contrast = strong ? 1.4 : 1.3;
+  const edgeLow = strong ? 0.03 : 0.05;
+  const edgeHigh = strong ? 0.1 : 0.15;
+  const threshold = strong ? 30 : 40;
+  const dilatePasses = strong ? "dilation,dilation" : "dilation";
+  let g = "";
+  g += `[${baseLabel}]split=2[cb][ce];`;
+  g += `[cb]gblur=sigma=${blurSigma},eq=saturation=${sat}:contrast=${contrast}[csmooth];`;
+  g += `[ce]format=gray,edgedetect=low=${edgeLow}:high=${edgeHigh},lutyuv=y='if(gt(val,${threshold}),255,0)':u=128:v=128,${dilatePasses},negate[cedge];`;
+  g += `[csmooth][cedge]blend=all_mode=multiply:all_opacity=1[${outLabel}]`;
+  return g;
+}
+
+function voiceAudioStep(preset){
+  switch(preset){
+    case "deep":  return "asetrate=44100*0.8,aresample=44100,atempo=1.25";
+    case "high":  return "asetrate=44100*1.3,aresample=44100,atempo=0.77";
+    case "robot": return "asetrate=44100*0.9,aresample=44100,atempo=1.1,chorus=0.5:0.9:50:0.4:0.25:2";
+    default: return null;
+  }
+}
+
+/* ==================================================================
+   EDIT MODE
+   ================================================================== */
+(function editMode(){
+  const dropEl = document.getElementById("edit-drop");
+  const fileInput = document.getElementById("edit-file");
+  const preview = document.getElementById("edit-preview");
+  const trimRow = document.getElementById("trim-row");
+  const trimStartInput = document.getElementById("trim-start");
+  const trimEndInput = document.getElementById("trim-end");
+  const durNote = document.getElementById("dur-note");
+
+  let currentFile = null;
+  let currentDuration = 0;
+
+  // label[for="edit-file"] opens the file picker natively — reliable on mobile too.
+  ["dragover","dragenter"].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault();dropEl.classList.add("drag");}));
+  ["dragleave","drop"].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault();dropEl.classList.remove("drag");}));
+  dropEl.addEventListener("drop", e => { if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener("change", () => { if(fileInput.files[0]) loadFile(fileInput.files[0]); });
+  const fileInputFallback = document.getElementById("edit-file-fallback");
+  fileInputFallback.addEventListener("change", () => { if(fileInputFallback.files[0]) loadFile(fileInputFallback.files[0]); });
+
+  function loadFile(file){
+    currentFile = file;
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.style.display = "block";
+    preview.onloadedmetadata = () => {
+      currentDuration = preview.duration;
+      trimStartInput.value = "0";
+      trimEndInput.value = currentDuration.toFixed(1);
+      trimRow.style.display = "grid";
+      durNote.textContent = "Duration: " + currentDuration.toFixed(1) + "s. Leave trim as-is to keep the full clip.";
+    };
+  }
+
+  window.loadFileIntoEditor = loadFile; // used by "send merge to edit"
+
+  // aspect / resolution option pickers
+  function wireOptGroup(containerId, groupAttr){
+    const container = document.getElementById(containerId);
+    container.querySelectorAll(".opt").forEach(opt => {
+      opt.addEventListener("click", () => {
+        container.querySelectorAll(".opt").forEach(o=>o.classList.remove("sel"));
+        opt.classList.add("sel");
+        onOptionsChanged();
+      });
+    });
+  }
+  wireOptGroup("aspect-opts");
+  wireOptGroup("res-opts");
+
+  document.querySelectorAll('[data-group="cartoon-intensity"]').forEach(opt=>{
+    opt.addEventListener("click", () => {
+      document.querySelectorAll('[data-group="cartoon-intensity"]').forEach(o=>o.classList.remove("sel"));
+      opt.classList.add("sel");
+    });
+  });
+  document.querySelectorAll('[data-group="bg-mode"]').forEach(opt=>{
+    opt.addEventListener("click", () => {
+      document.querySelectorAll('[data-group="bg-mode"]').forEach(o=>o.classList.remove("sel"));
+      opt.classList.add("sel");
+    });
+  });
+
+  const resWarning = document.getElementById("res-warning");
+  function onOptionsChanged(){
+    const res = getSelected("res-opts");
+    resWarning.style.display = (res === "4k" || res === "8k") ? "block" : "none";
+  }
+
+  function getSelected(containerId){
+    const sel = document.querySelector("#"+containerId+" .opt.sel");
+    return sel ? sel.dataset.val : null;
+  }
+  function getSelectedGroup(groupAttr){
+    const sel = document.querySelector('[data-group="'+groupAttr+'"].sel');
+    return sel ? sel.dataset.val : null;
+  }
+
+  // cartoon toggle
+  const cartoonSwitch = document.getElementById("cartoon-switch");
+  const cartoonIntensityWrap = document.getElementById("cartoon-intensity-wrap");
+  let cartoonOn = false;
+  cartoonSwitch.addEventListener("click", () => {
+    cartoonOn = !cartoonOn;
+    cartoonSwitch.classList.toggle("on", cartoonOn);
+    cartoonIntensityWrap.style.display = cartoonOn ? "block" : "none";
+  });
+
+  // music
+  const musicDrop = document.getElementById("music-drop");
+  const musicInput = document.getElementById("music-file");
+  const musicInputFallback = document.getElementById("music-file-fallback");
+  const musicName = document.getElementById("music-name");
+  const musicOpts = document.getElementById("music-opts");
+  let musicFile = null;
+  function handleMusicFile(f){
+    if(!f) return;
+    musicFile = f;
+    musicName.textContent = "Selected: " + musicFile.name;
+    musicOpts.style.display = "block";
+  }
+  musicInput.addEventListener("change", () => handleMusicFile(musicInput.files[0]));
+  musicInputFallback.addEventListener("change", () => handleMusicFile(musicInputFallback.files[0]));
+
+  const statusEl = document.getElementById("edit-status");
+  const progressEl = document.getElementById("edit-progress");
+  const processBtn = document.getElementById("process-btn");
+  const resultEmpty = document.getElementById("edit-result-empty");
+  const resultBox = document.getElementById("edit-result");
+  const outPreview = document.getElementById("out-preview");
+  const dlLink = document.getElementById("dl-link");
+
+  let lastOutputBlob = null;
+
+  function setStatus(msg){ statusEl.textContent = msg; }
+  function setProgress(pct){ progressEl.style.width = Math.max(0,Math.min(100,pct)) + "%"; }
+  function editProgressHandler({progress}){ if(progress>=0 && progress<=1) setProgress(5 + progress*90); }
+
+  function startLiveStatus(baseMsg){
+    const t0 = Date.now();
+    let lastLogLine = "";
+    setLogHandler(msg => {
+      const m = /time=(\d\d:\d\d:\d\d\.\d\d)/.exec(msg);
+      if(m) lastLogLine = "encoded so far: " + m[1];
+    });
+    const timer = setInterval(() => {
+      const secs = Math.round((Date.now()-t0)/1000);
+      setStatus(baseMsg + "\n" + secs + "s elapsed" + (lastLogLine ? " — " + lastLogLine : " — starting encode...") + "\nThis tab must stay open; single-threaded in-browser encoding is slower than a native app, especially on phones.");
+    }, 1000);
+    return () => { clearInterval(timer); setLogHandler(null); };
+  }
+
+  processBtn.addEventListener("click", async () => {
+    if(!currentFile){ setStatus("Choose a video first."); return; }
+    processBtn.disabled = true;
+    setProgress(2);
+    try{
+      setStatus("Loading video engine (first run downloads ~30MB, then it's cached)...");
+      const eng = await ensureEngine(msg => { /* verbose log, keep status simple */ });
+      eng.on("progress", editProgressHandler);
+
+      const aspect = getSelected("aspect-opts") || "original";
+      const resTier = getSelected("res-opts") || "original";
+      const intensity = getSelectedGroup("cartoon-intensity") || "light";
+      const voicePreset = document.getElementById("voice-select").value;
+      const bgMode = getSelectedGroup("bg-mode") || "mix";
+      const bgVolume = document.getElementById("music-vol").value;
+      const quality = QUALITY_TABLE[document.getElementById("quality-select").value];
+
+      const start = parseFloat(trimStartInput.value) || 0;
+      const end = parseFloat(trimEndInput.value) || currentDuration;
+      const dur = Math.max(0.1, end - start);
+
+      setStatus("Writing files into the engine...");
+      await safeDelete("input_src");
+      await ffmpeg.writeFile("input_src", await fileToUint8(currentFile));
+      let musicWritten = false;
+      if(musicFile && bgMode){
+        await safeDelete("music_src");
+        await ffmpeg.writeFile("music_src", await fileToUint8(musicFile));
+        musicWritten = true;
+      }
+
+      // ---- build video graph ----
+      const cSteps = [];
+      const cr = cropStep(aspect);
+      if(cr) cSteps.push(cr);
+      const sc = scaleStep(aspect, resTier);
+      if(sc) cSteps.push(sc.filter);
+      cSteps.push("setsar=1", "format=yuv420p");
+      const preChain = cSteps.join(",");
+
+      let graph = `[0:v]${preChain}[pre];`;
+      if(cartoonOn){
+        graph += cartoonGraph("pre", "vout", intensity) + ";";
+      } else {
+        graph += `[pre]null[vout];`;
+      }
+
+      // ---- build audio graph ----
+      const vStep = voiceAudioStep(voicePreset);
+      graph += vStep ? `[0:a]${vStep}[avoice];` : `[0:a]anull[avoice];`;
+
+      let audioOutLabel = "avoice";
+      if(musicWritten){
+        graph += `[1:a]volume=${bgVolume}[amusic];`;
+        if(bgMode === "replace"){
+          audioOutLabel = "amusic";
+        } else {
+          graph += `[avoice][amusic]amix=inputs=2:duration=first:dropout_transition=0[amix];`;
+          audioOutLabel = "amix";
+        }
+      }
+      // strip trailing semicolon issues: build final graph string cleanly
+      graph = graph.replace(/;+$/,"");
+
+      const args = [];
+      if(start > 0) args.push("-ss", String(start));
+      args.push("-i", "input_src");
+      args.push("-t", String(dur));
+      if(musicWritten) args.push("-i", "music_src");
+      args.push("-filter_complex", graph);
+      args.push("-map", "[vout]", "-map", `[${audioOutLabel}]`);
+      args.push("-c:v", "libx264", "-preset", quality.preset, "-crf", quality.crf);
+      args.push("-c:a", "aac", "-b:a", "192k");
+      args.push("-movflags", "+faststart");
+      args.push("output_out.mp4");
+
+      setStatus("Processing... this runs fully on your device and may take a while for long or high-resolution clips.");
+      const stopLiveStatus = startLiveStatus("Processing on your device...");
+      await safeDelete("output_out.mp4");
+      try{
+        await ffmpeg.exec(args);
+      }finally{
+        stopLiveStatus();
+      }
+
+      const data = await ffmpeg.readFile("output_out.mp4");
+      const blob = new Blob([data.buffer], {type:"video/mp4"});
+      lastOutputBlob = blob;
+      const url = URL.createObjectURL(blob);
+      outPreview.src = url;
+      dlLink.href = url;
+      resultEmpty.style.display = "none";
+      resultBox.style.display = "block";
+      setStatus("Done. Preview and download below.");
+      setProgress(100);
+    }catch(err){
+      console.error(err);
+      setStatus("Something went wrong: " + (err && err.message ? err.message : String(err)) + "\nTry a shorter clip or a lower resolution, then retry.");
+      setProgress(0);
+    }finally{
+      processBtn.disabled = false;
+      if(ffmpeg) ffmpeg.off("progress", editProgressHandler);
+    }
+  });
+
+  document.getElementById("send-to-merge").addEventListener("click", () => {
+    if(!lastOutputBlob) return;
+    const file = new File([lastOutputBlob], "edited-clip.mp4", {type:"video/mp4"});
+    window.addFileToMergeQueue(file);
+    document.querySelector('.mode-btn[data-mode="merge"]').click();
+  });
+})();
+
+/* ==================================================================
+   MERGE MODE
+   ================================================================== */
+(function mergeMode(){
+  const dropEl = document.getElementById("merge-drop");
+  const fileInput = document.getElementById("merge-file");
+  const queueEl = document.getElementById("merge-queue");
+  let queue = []; // {file, name}
+
+  // label[for="merge-file"] opens the file picker natively — reliable on mobile too.
+  ["dragover","dragenter"].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault();dropEl.classList.add("drag");}));
+  ["dragleave","drop"].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault();dropEl.classList.remove("drag");}));
+  dropEl.addEventListener("drop", e => { addFiles(e.dataTransfer.files); });
+  fileInput.addEventListener("change", () => addFiles(fileInput.files));
+  const fileInputFallback = document.getElementById("merge-file-fallback");
+  fileInputFallback.addEventListener("change", () => addFiles(fileInputFallback.files));
+
+  function addFiles(fileList){
+    Array.from(fileList).forEach(f => queue.push({file:f, name:f.name}));
+    renderQueue();
+  }
+  window.addFileToMergeQueue = function(file){
+    queue.push({file, name:file.name});
+    renderQueue();
+  };
+
+  function renderQueue(){
+    queueEl.innerHTML = "";
+    queue.forEach((item, i) => {
+      const row = document.createElement("div");
+      row.className = "queue-item";
+      row.innerHTML = `
+        <span class="badge">${i+1}</span>
+        <span class="name">${item.name}</span>
+        <div class="qbtns">
+          <button data-act="up" title="Move up">&#8593;</button>
+          <button data-act="down" title="Move down">&#8595;</button>
+          <button data-act="del" title="Remove">&times;</button>
+        </div>`;
+      row.querySelector('[data-act="up"]').addEventListener("click", () => { if(i>0){ [queue[i-1],queue[i]]=[queue[i],queue[i-1]]; renderQueue(); } });
+      row.querySelector('[data-act="down"]').addEventListener("click", () => { if(i<queue.length-1){ [queue[i+1],queue[i]]=[queue[i],queue[i+1]]; renderQueue(); } });
+      row.querySelector('[data-act="del"]').addEventListener("click", () => { queue.splice(i,1); renderQueue(); });
+      queueEl.appendChild(row);
+    });
+  }
+
+  function wireOptGroup(containerId){
+    const container = document.getElementById(containerId);
+    container.querySelectorAll(".opt").forEach(opt => {
+      opt.addEventListener("click", () => {
+        container.querySelectorAll(".opt").forEach(o=>o.classList.remove("sel"));
+        opt.classList.add("sel");
+        checkWarn();
+      });
+    });
+  }
+  wireOptGroup("merge-aspect-opts");
+  wireOptGroup("merge-res-opts");
+  function getSelected(containerId){
+    const sel = document.querySelector("#"+containerId+" .opt.sel");
+    return sel ? sel.dataset.val : null;
+  }
+  const mergeResWarning = document.getElementById("merge-res-warning");
+  function checkWarn(){
+    const res = getSelected("merge-res-opts");
+    mergeResWarning.style.display = (res === "4k" || res === "8k") ? "block" : "none";
+  }
+
+  const statusEl = document.getElementById("merge-status");
+  const progressEl = document.getElementById("merge-progress");
+  const mergeBtn = document.getElementById("merge-btn");
+  const resultEmpty = document.getElementById("merge-result-empty");
+  const resultBox = document.getElementById("merge-result");
+  const outPreview = document.getElementById("merge-out-preview");
+  const dlLink = document.getElementById("merge-dl-link");
+
+  function setStatus(msg){ statusEl.textContent = msg; }
+  function setProgress(pct){ progressEl.style.width = Math.max(0,Math.min(100,pct)) + "%"; }
+  function mergeProgressHandler({progress}){ if(progress>=0 && progress<=1) setProgress(5 + progress*90); }
+
+  function startLiveStatus(baseMsg){
+    const t0 = Date.now();
+    let lastLogLine = "";
+    setLogHandler(msg => {
+      const m = /time=(\d\d:\d\d:\d\d\.\d\d)/.exec(msg);
+      if(m) lastLogLine = "encoded so far: " + m[1];
+    });
+    const timer = setInterval(() => {
+      const secs = Math.round((Date.now()-t0)/1000);
+      setStatus(baseMsg + "\n" + secs + "s elapsed" + (lastLogLine ? " — " + lastLogLine : " — starting encode...") + "\nThis tab must stay open; single-threaded in-browser encoding is slower than a native app, especially on phones.");
+    }, 1000);
+    return () => { clearInterval(timer); setLogHandler(null); };
+  }
+
+  let lastMergedBlob = null;
+
+  mergeBtn.addEventListener("click", async () => {
+    if(queue.length < 2){ setStatus("Add at least two videos to merge."); return; }
+    mergeBtn.disabled = true;
+    setProgress(2);
+    try{
+      setStatus("Loading video engine (first run downloads ~30MB, then it's cached)...");
+      const eng = await ensureEngine();
+      eng.on("progress", mergeProgressHandler);
+
+      const aspect = getSelected("merge-aspect-opts") || "16:9";
+      const resTier = getSelected("merge-res-opts") || "1080p";
+      const dims = RES_TABLE[aspect][resTier];
+
+      setStatus("Writing files into the engine...");
+      const inputArgs = [];
+      for(let i=0;i<queue.length;i++){
+        const name = "clip"+i+".mp4";
+        await safeDelete(name);
+        await ffmpeg.writeFile(name, await fileToUint8(queue[i].file));
+        inputArgs.push("-i", name);
+      }
+
+      const cr = cropStep(aspect);
+      let graphParts = [];
+      let concatInputs = "";
+      for(let i=0;i<queue.length;i++){
+        const steps = [];
+        if(cr) steps.push(cr);
+        steps.push(`scale=${dims[0]}:${dims[1]}:flags=lanczos`, "setsar=1", "fps=30", "format=yuv420p");
+        graphParts.push(`[${i}:v]${steps.join(",")}[v${i}]`);
+        graphParts.push(`[${i}:a]aresample=44100,aformat=channel_layouts=stereo[a${i}]`);
+        concatInputs += `[v${i}][a${i}]`;
+      }
+      graphParts.push(`${concatInputs}concat=n=${queue.length}:v=1:a=1[vout][aout]`);
+      const graph = graphParts.join(";");
+
+      const args = [...inputArgs, "-filter_complex", graph, "-map", "[vout]", "-map", "[aout]",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "merged_out.mp4"];
+
+      setStatus("Merging " + queue.length + " clips... this can take a while depending on total length and resolution.");
+      const stopLiveStatus = startLiveStatus("Merging " + queue.length + " clips on your device...");
+      await safeDelete("merged_out.mp4");
+      try{
+        await ffmpeg.exec(args);
+      }finally{
+        stopLiveStatus();
+      }
+
+      const data = await ffmpeg.readFile("merged_out.mp4");
+      const blob = new Blob([data.buffer], {type:"video/mp4"});
+      lastMergedBlob = blob;
+      const url = URL.createObjectURL(blob);
+      outPreview.src = url;
+      dlLink.href = url;
+      resultEmpty.style.display = "none";
+      resultBox.style.display = "block";
+      setStatus("Done. Preview and download below.");
+      setProgress(100);
+    }catch(err){
+      console.error(err);
+      setStatus("Something went wrong: " + (err && err.message ? err.message : String(err)) + "\nTry fewer clips or a lower resolution, then retry.");
+      setProgress(0);
+    }finally{
+      mergeBtn.disabled = false;
+      if(ffmpeg) ffmpeg.off("progress", mergeProgressHandler);
+    }
+  });
+
+  document.getElementById("send-merge-to-edit").addEventListener("click", () => {
+    if(!lastMergedBlob) return;
+    const file = new File([lastMergedBlob], "merged-video.mp4", {type:"video/mp4"});
+    window.loadFileIntoEditor(file);
+    document.querySelector('.mode-btn[data-mode="edit"]').click();
+  });
+})();
+
+/* ---------------- Mode switching ---------------- */
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    document.getElementById("panel-"+btn.dataset.mode).classList.add("active");
+  });
+});
+
+})();
+</script>
+</body>
+</html>
